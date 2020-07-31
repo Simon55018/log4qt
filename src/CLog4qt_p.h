@@ -26,7 +26,9 @@ namespace Log4Qt
 
         virtual ~CLog4qtPrivate();
 
-        void writeLog(LogInfo stLogInfo);
+        void writeLog(const LogInfo stLogInfo);
+
+        void writeLog(const LogType emLogType, const QString sLog);
 
     protected:
         virtual void run();

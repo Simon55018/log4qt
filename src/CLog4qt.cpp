@@ -56,11 +56,8 @@ namespace Log4Qt
     void CLog4qt::log(const LogType emLogType, const QString &sLog)
     {
         Q_D(CLog4qt);
-        LogInfo stLogInfo;
-        stLogInfo.emLogType = emLogType;
-        stLogInfo.sLog = sLog;
 
-        d->writeLog(stLogInfo);
+        d->writeLog(emLogType, sLog);
     }
 
     void CLog4qt::debug(const QString sLog)
@@ -166,12 +163,21 @@ namespace Log4Qt
         }
     }
 
-    void CLog4qtPrivate::writeLog(LogInfo stLogInfo)
+    void CLog4qtPrivate::writeLog(const LogInfo stLogInfo)
     {
         QMutexLocker locker(&m_mutex);
         m_listLogInfo.append(stLogInfo);
 
         m_waitCondition.wakeOne();
+    }
+
+    void CLog4qtPrivate::writeLog(const LogType emLogType, const QString sLog)
+    {
+        LogInfo stLogInfo;
+        stLogInfo.emLogType = emLogType;
+        stLogInfo.sLog = sLog;
+
+        writeLog(stLogInfo);
     }
 
     void CLog4qtPrivate::run()
