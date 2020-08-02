@@ -131,18 +131,35 @@ namespace Log4Qt
     {
         q_ptr = NULL;
 
+        // 获取rootLogger指针
         m_logger = Log4Qt::Logger::rootLogger();
+        // 设置输出日志格式
         PatternLayout *layout = new PatternLayout(PatternLayout::DEFAULT_CONVERSION_PATTERN);
         layout->setConversionPattern(PATTERN_FORMAT);
+        // 函数并没有任何调用,这句是为了完善逻辑
         layout->activateOptions();
 
+        // 检查日志的目录是否存在,若不存在则创建日志目录
+        QDir dir(LOG_ABSOLUTE_DIR_PATH);
+        if( !dir.exists() )
+        {
+            dir.mkpath(LOG_ABSOLUTE_DIR_PATH);
+        }
+
+        // 滚动文件输出器
         m_appender = new RollingFileAppender;
+        // 设置日志格式
         m_appender->setLayout(layout);
+        // 设置日志名称
         m_appender->setFile(LOG_ABSOLUTE_DIR_PATH + LOG_FILE_NAME);
+        // 设置在日志后面增加新的信息
         m_appender->setAppendFile(true);
+        // 设置马上输出日志信息
         m_appender->setImmediateFlush(true);
+        // 设置输出器
         m_appender->activateOptions();
 
+        // 增加文本输出器
         m_logger->addAppender(m_appender);
 
         start();
@@ -165,9 +182,12 @@ namespace Log4Qt
 
     void CLog4qtPrivate::writeLog(const LogInfo stLogInfo)
     {
+        // 上锁
         QMutexLocker locker(&m_mutex);
+        // 增加日志信息
         m_listLogInfo.append(stLogInfo);
 
+        // 开启一次线程
         m_waitCondition.wakeOne();
     }
 
@@ -194,20 +214,24 @@ namespace Log4Qt
     {
         QList<LogInfo> listLogInfo;
         QMutexLocker locker(&m_mutex);
-        listLogInfo.swap(m_listLogInfo);
+        listLogInfo.swap(m_listLogInfo);    // 获取日志信息
+        // 判断日志信息是否为空, 等待10s
         if( listLogInfo.isEmpty() && !m_waitCondition.wait(&m_mutex, 10000) )
         {
             return;
         }
 
+        // 设置输出文件名(为了程序一直运行时, 第二天时会重新创建一些的文件)
         m_appender->setFile(LOG_ABSOLUTE_DIR_PATH + LOG_FILE_NAME);
         m_appender->activateOptions();
 
+        // 获取日志链表
         QList<LogInfo>::const_iterator iter = listLogInfo.constBegin();
         for( ; iter != listLogInfo.constEnd(); ++iter)
         {
             const LogInfo stLogInfo = *iter;
 
+            // 根据日志类型输出日志
             switch (stLogInfo.emLogType)
             {
             case EM_DEBUG:
@@ -234,6 +258,67 @@ namespace Log4Qt
                 break;
             }
         }
+    }
+
+    CLogBase::CLogBase(LogType emLogType, const char *pucFileName, int lLine)
+        : m_emLogType(emLogType), m_pucFileName(pucFileName), m_lLine(lLine)
+    {
+
+    }
+
+    CLogBase::~CLogBase()
+    {
+        // 获知日志信息
+        QList<QVariant>::const_iterator iter = m_listVarData.constBegin();
+
+        QString sLog;
+        // 生成日志信息
+        for( ; m_listVarData.constEnd() != iter ; ++iter)
+        {
+            QVariant var = *iter;
+            sLog.append(var.toString());
+        }
+
+        if( NULL != m_pucFileName )
+        {
+            sLog = QString(OUTPUT_FORMAT).arg(QString::fromLatin1(m_pucFileName))
+                                         .arg(m_lLine).arg(sLog);
+        }
+
+        // 根据日志类型输出日志
+        switch (m_emLogType)
+        {
+        case EM_DEBUG:
+            CLog4qt::debug(sLog);
+            break;
+
+        case EM_INFO:
+            CLog4qt::info(sLog);
+            break;
+
+        case EM_WARN:
+            CLog4qt::warn(sLog);
+            break;
+
+        case EM_ERROR:
+            CLog4qt::error(sLog);
+            break;
+
+        case EM_FATAL:
+            CLog4qt::fatal(sLog);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    CLogBase &CLogBase::operator <<(const QVariant var)
+    {
+        // 每次操作<<运算符就会增加一个日志信息
+        m_listVarData.push_back(var);
+
+        return *this;
     }
 }
 
