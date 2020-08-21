@@ -50,8 +50,5 @@ else: CONFIG(release, debug|release){
     OBJECTS_DIR = ./release
     win32:DESTDIR = $$PWD/../Win32/Release/bin
     unix:DESTDIR = $$PWD/../Unix/Release/bin
-
-    #release版本不打印对应调试消息
-    DEFINES += QT_NO_DEBUG_OUTPUT
 }
 #end

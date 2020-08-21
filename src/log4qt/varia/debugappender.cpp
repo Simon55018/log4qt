@@ -91,7 +91,10 @@ namespace Log4Qt
         OutputDebugStringW(reinterpret_cast<const WCHAR*>(message.utf16()));
   #endif
 #else
-        fprintf(stderr, message.toLocal8Bit().data());
+        // fprintf(stderr,message.toLocal8Bit().data());
+        // 2020.08.03
+        // fix warning: format not a string literal and no format arguments [-Wformat-security]
+        fprintf(stderr, "%s", message.toLocal8Bit().data());
         fflush(stderr);
 #endif
 	}
